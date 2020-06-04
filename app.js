@@ -25,7 +25,7 @@ var database;
 function connectDB()
 {
     // Database Information
-    var databaseUrl = 'mongodb://localhost:27017/local';    //mongodb://[ipAddress]:[Port]/[db name]
+    var databaseUrl = 'mongodb://localhost:27017';    // mongodb://[ipAddress]:[Port]
 
     // Connect to DB
     MongoClient.connect(databaseUrl, function(err, db) {
@@ -33,7 +33,7 @@ function connectDB()
 
         console.log('Connect to Mongo Database : ' + databaseUrl);
 
-        database = db;
+        database = db.db('local');      // db name
     });
 }
 
@@ -60,6 +60,61 @@ app.use(expressSession({
     resave: true,
     saveUninitialized: true
 }));
+
+// Auth to user
+var authUser = function(database, id, password, callback)
+{
+    console.log('Called authUser');
+
+    // Reference 'users' collection
+    var users = database.collection('users');
+
+    // Search for user using id & pw
+    users.find({"id" : id}, {"password" : password}).toArray(function(err, docs) {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+
+        if (docs.length > 0) {
+            console.log('Match the user, ID[%s]', id);
+            callback(null, docs);
+        } else {
+            console.log('Cannot find matched user');
+            callback(null, null);
+        }
+    });
+}
+
+app.post('/process/login', function(req, res){
+    console.log('Called /process/login');
+
+    var paramId = req.body.id;
+    var paramPassword = req.body.password;
+
+    console.log("requested id[%s], pw[%s]", paramId, paramPassword);
+
+    if (database) {
+        authUser(database, paramId, paramPassword, function(err, docs) {
+            if (err) { throw err; }
+
+            if (docs) {
+                console.dir(docs);
+                res.writeHead('200', {'Content-Type': 'text/html; charset=utf8'});
+                res.write('<h1>Success LOGIN</h1>')
+                res.end();
+            } else {
+                res.writeHead('200', {'Content-Type': 'text/html; charset=utf8'});
+                res.write('<h1>Fail to LOGIN</h1>')
+                res.end();
+            }
+        });
+    } else {
+        res.writeHead('200', {'Content-Type': 'text/html; charset=utf8'});
+        res.write('<h1>Fail to Connect DB</h1>')
+        res.end();
+    }
+});
 
 // Router
 var router = express.Router();
