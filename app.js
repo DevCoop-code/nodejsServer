@@ -269,6 +269,11 @@ var errorHandler = expressErrorHandler({
 app.use(expressErrorHandler.httpError(404));
 app.use(errorHandler);
 
+// Exception Handling
+process.on('uncaughtException', (err)=>{
+    logger.error('uncaughtException', err);
+});
+
 // ===== Server Start ===== //
 http.createServer(app).listen(app.get('port'), function() {
     logger.info('Server is Start. Port: ' + app.get('port'));
