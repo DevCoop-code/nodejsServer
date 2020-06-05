@@ -18,6 +18,62 @@ var expressSession = require('express-session');
 // Use MongoDB Module
 var MongoClient = require('mongodb').MongoClient;
 
+// Use Log File
+var winston = require('winston');   // Process of LOG
+var winstonDaily = require('winston-daily-rotate-file');    // Process of Daily LOG
+var moment = require('moment');     // Process of Time
+
+function timeStampFormat() {
+    return moment().format('YYYY-MM-DD HH:mm:ss.SSS ZZ');
+}
+
+var logger = winston.createLogger({
+    transports: [
+        new (winstonDaily)({
+            name: 'info-file',
+            filename: './log/server',
+            datePattern: '_yyyy-MM-dd.log',
+            colorize: false,
+            maxSize: 50000000,
+            maxFiles: 1000,
+            level: 'info',
+            showLevel: true,
+            json: false,
+            timestamp: timeStampFormat
+        }),
+        new (winston.transports.Console)({
+            name: 'debug-console',
+            colorize: true,
+            level: 'debug',
+            showLevel: true,
+            json: false,
+            timestamp: timeStampFormat
+        })
+    ],
+    exceptionHandlers: [
+        new (winstonDaily)({
+            name: 'exception-file',
+            filename: './log/exception',
+            datePattern: '_yyyy-MM-dd.log',
+            colorize: false,
+            maxsize: 50000000,
+            maxFiles: 1000,
+            level: 'error',
+            showLevel: true,
+            json: false,
+            timestamp: timeStampFormat
+        }),
+        new (winston.transports.Console)({
+            name: 'exception-console',
+            colorize: true,
+            level: 'debug',
+            showLevel: true,
+            json: false,
+            timestamp: timeStampFormat
+        })
+    ]
+});
+
 // Variable for DB
 var database;
 
@@ -31,7 +87,7 @@ function connectDB()
     MongoClient.connect(databaseUrl, function(err, db) {
         if (err) throw err;
 
-        console.log('Connect to Mongo Database : ' + databaseUrl);
+        logger.info('Connect to Mongo Database : ' + databaseUrl);
 
         database = db.db('local');      // db name
     });
@@ -68,7 +124,7 @@ app.use(expressSession({
 // Auth to user
 var authUser = function(database, id, password, callback)
 {
-    console.log('Called authUser');
+    logger.info('Called authUser');
 
     // Reference 'users' collection
     var users = database.collection('users');
@@ -81,10 +137,10 @@ var authUser = function(database, id, password, callback)
         }
 
         if (docs.length > 0) {
-            console.log('Match the user, ID[%s]', id);
+            logger.info('Match the user, ID[%s]', id);
             callback(null, docs);
         } else {
-            console.log('Cannot find matched user');
+            logger.error('Cannot find matched user');
             callback(null, null);
         }
     });
@@ -93,7 +149,7 @@ var authUser = function(database, id, password, callback)
 // Add Users
 var addUser = function(database, id, password, name, callback)
 {
-    console.log('Called addUser : ' + id + ', ' + password + ', ' + name);
+    logger.info('Called addUser : ' + id + ', ' + password + ', ' + name);
 
     // Reference 'users' collection
     var users = database.collection('users');
@@ -105,9 +161,9 @@ var addUser = function(database, id, password, name, callback)
         }
 
         if (result.insertedCount > 0) {
-            console.log("Add User Record: " + result.insertedCount);
+            logger.info("Add User Record: " + result.insertedCount);
         } else {
-            console.log("There is Record");
+            logger.error("There is Record");
         }
 
         callback(null, result);
@@ -118,14 +174,12 @@ var addUser = function(database, id, password, name, callback)
 var router = express.Router();
 
 router.route('/process/login').post(function(req, res){
-    console.log('Called /process/login');
-
-    console.log('Called /process/login');
+    logger.info('Called /process/login');
 
     var paramId = req.body.id;
     var paramPassword = req.body.password;
 
-    console.log("requested id[%s], pw[%s]", paramId, paramPassword);
+    logger.info("requested id[%s], pw[%s]", paramId, paramPassword);
 
     if (database) {
         authUser(database, paramId, paramPassword, function(err, docs) {
@@ -144,7 +198,7 @@ router.route('/process/login').post(function(req, res){
                 var context = {userid:paramId, username:username};
                 req.app.render('login_success', context, function(err, html) {
                     if (err) {
-                        console.error('');
+                        logger.error('Error to rendering login success view');
 
                         res.write('<h2>Error occured when rendering View</h2>');
                         res.write('<p>' + err.stack + '</p>');
@@ -170,13 +224,13 @@ router.route('/process/login').post(function(req, res){
 });
 
 router.route('/process/addUser').post(function(req, res) {
-    console.log('Called /process/addUser');
+    logger.info('Called /process/addUser');
 
     var paramId = req.body.id || req.query.id;
     var paramPassword = req.body.password || req.query.password;
     var paramName = req.body.name || req.query.name;
 
-    console.log('Requested Parameter : ' + paramId + ', ' + paramPassword + ', ' + paramName);
+    logger.info('Requested Parameter : ' + paramId + ', ' + paramPassword + ', ' + paramName);
 
     if (database) {
         addUser(database, paramId, paramPassword, paramName, function(err, result){
@@ -217,7 +271,7 @@ app.use(errorHandler);
 
 // ===== Server Start ===== //
 http.createServer(app).listen(app.get('port'), function() {
-    console.log('Server is Start. Port: ' + app.get('port'));
+    logger.info('Server is Start. Port: ' + app.get('port'));
 
     connectDB();
 });
