@@ -114,8 +114,7 @@ app.use(bodyParser.json());
 // Open the 'public' directory of static
 app.use('/public', static(path.join(__dirname, 'public')));
 // Open the 'upload' directory for uploading video file
-app.use('/uploads', static(path.join('/home/ubuntu/mediaServerStorage', 'uploads')));
-
+// app.use('/uploads', static(path.join('/home/ubuntu/mediaServerStorage', 'uploads')));
 
 // Set the view engine
 app.set('views', __dirname + '/views');
