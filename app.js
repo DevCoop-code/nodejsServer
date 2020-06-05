@@ -15,6 +15,13 @@ var expressErrorHandler = require('express-error-handler');
 // Get the Session MiddleWare
 var expressSession = require('express-session');
 
+// Get the File upload MiddleWare
+var multer = require('multer');
+var fs = require('fs');
+
+// Support for multi-server connections(CORS) when clients request ajax
+var cors = require('cors');
+
 // Use MongoDB Module
 var MongoClient = require('mongodb').MongoClient;
 
@@ -106,6 +113,9 @@ app.use(bodyParser.json());
 
 // Open the 'public' directory of static
 app.use('/public', static(path.join(__dirname, 'public')));
+// Open the 'upload' directory for uploading video file
+app.use('/uploads', static(path.join('/home/ubuntu/mediaServerStorage', 'uploads')));
+
 
 // Set the view engine
 app.set('views', __dirname + '/views');
@@ -120,6 +130,26 @@ app.use(expressSession({
     resave: true,
     saveUninitialized: true
 }));
+
+// Support for multi-server connections(CORS) when clients request ajax
+app.use(cors());
+
+// Using multer MiddleWare: Important Time Sequence of using Multer MiddleWare  body-parser->multer->router
+var storage = multer.diskStorage({
+    destination: function(req, file, callback) {        // Location of uploaded file is stored
+        callback(null, 'uploads');
+    },
+    filename: function(req, file, callback) {           // Change the name of uploaded file
+        callback(null, file.originalname + Date.now());
+    }
+});
+var upload = multer({
+    storage: storage,
+    limits: {               // Limit the uploaded file Size and Count
+        files: 10,
+        fileSize: 1024 * 1024 * 1024
+    }
+});
 
 // Auth to user
 var authUser = function(database, id, password, callback)
@@ -252,6 +282,45 @@ router.route('/process/addUser').post(function(req, res) {
         res.writeHead('200', {'Content-Type':'text/html;charset=utf8'});
         res.write('<h2>Fail to Connect DB</h2>');
         res.end();
+    }
+});
+
+router.route('/process/upload').post(upload.array('fileTest', 1), function(req, res) {
+    logger.info('Called /process/upload');
+
+    try {
+        var files = req.files;
+
+        console.dir('#===== Uploaded File Info =====#');
+        console.dir(req.files[0]);
+        console.dir('#=====#');
+
+        // Variable of current File Info
+        var originalname = '', filename = '', mimetype = '', size = 0;
+
+        if (Array.isArray(files)) {     // When is an array
+            logger.info('File Count of Array : %d', files.length);
+
+            for (var index = 0; index < files.length; index++) {
+                originalname = files[index].originalname;
+                filename = files[index].name;
+                mimetype = files[index].mimetype;
+                size = files[index].size;
+            }
+
+            logger.info('Current File Info : ' + originalname + ', ' + filename + ', ' + mimetype + ', ' + size);
+
+            // Sending Response
+            res.writeHead('200', {'Content-Type':'text/html;charset=utf8'});
+            res.write('<h3>Success to File Uploaded</h3>');
+            res.write('<hr/>');
+            res.write('<p>원본 파일 이름 : ' + originalname + ' -> Stored FileName : ' + filename + '</p>');
+            res.write('<p>MIME TYPE : ' + mimetype + '</p>');
+            res.write('<p>File Size : ' + size + '</p>');
+            res.end();
+        }
+    } catch(err) {
+        console.dir(err.stack);
     }
 });
 
