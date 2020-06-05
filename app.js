@@ -137,7 +137,7 @@ app.use(cors());
 // Using multer MiddleWare: Important Time Sequence of using Multer MiddleWare  body-parser->multer->router
 var storage = multer.diskStorage({
     destination: function(req, file, callback) {        // Location of uploaded file is stored
-        callback(null, 'uploads');
+        callback(null, '/home/ubuntu/mediaServerStorage/uploads');
     },
     filename: function(req, file, callback) {           // Change the name of uploaded file
         callback(null, file.originalname + Date.now());
