@@ -51,6 +51,10 @@ app.use(bodyParser.json());
 // Open the 'public' directory of static
 app.use('/public', static(path.join(__dirname, 'public')));
 
+// Set the view engine
+app.set('views', __dirname + '/views');
+app.set('view engine', 'ejs');
+
 // Setting cookie-parser
 app.use(cookieParser());
 
@@ -129,8 +133,28 @@ router.route('/process/login').post(function(req, res){
 
             if (docs) {
                 console.dir(docs);
+
+                // Check the username from database
+                var username = docs[0].name;
+
                 res.writeHead('200', {'Content-Type': 'text/html; charset=utf8'});
-                res.write('<h1>Success LOGIN</h1>')
+                // res.write('<h1>Success LOGIN</h1>')
+                
+                // Sending View Template
+                var context = {userid:paramId, username:username};
+                req.app.render('login_success', context, function(err, html) {
+                    if (err) {
+                        console.error('');
+
+                        res.write('<h2>Error occured when rendering View</h2>');
+                        res.write('<p>' + err.stack + '</p>');
+                        res.end();
+
+                        return;
+                    }
+
+                    res.end(html);
+                });
                 res.end();
             } else {
                 res.writeHead('200', {'Content-Type': 'text/html; charset=utf8'});
