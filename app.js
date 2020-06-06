@@ -146,7 +146,7 @@ var upload = multer({
     storage: storage,
     limits: {               // Limit the uploaded file Size and Count
         files: 10,
-        fileSize: 1024 * 1024 * 1024
+        fileSize: 1024 * 1024 * 1024 * 10
     }
 });
 
