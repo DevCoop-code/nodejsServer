@@ -2,6 +2,7 @@
 var express = require('express');
 var http = require('http');
 var path = require('path');
+var url = require('url');
 
 // Get the Express MiddleWare
 var bodyParser = require('body-parser');
@@ -114,7 +115,7 @@ app.use(bodyParser.json());
 // Open the 'public' directory of static
 app.use('/public', static(path.join(__dirname, 'public')));
 // Open the 'upload' directory for uploading video file
-// app.use('/uploads', static(path.join('/home/ubuntu/mediaServerStorage', 'uploads')));
+app.use('/VODs', static(path.join('/home/ubuntu/mediaServerStorage', 'VODs')));
 
 // Set the view engine
 app.set('views', __dirname + '/views');
@@ -146,7 +147,7 @@ var upload = multer({
     storage: storage,
     limits: {               // Limit the uploaded file Size and Count
         files: 10,
-        fileSize: 1024 * 1024 * 1024 * 10
+        fileSize: 1024 * 1024 * 1024 * 10       // 10GB
     }
 });
 
@@ -321,6 +322,20 @@ router.route('/process/upload').post(upload.array('fileTest', 1), function(req, 
     } catch(err) {
         console.dir(err.stack);
     }
+});
+
+router.route('/hls_sample/:id').get(function(req, res) {
+    console.log('Called hls sample');
+
+    var uri = url.parse(req.url).pathname;
+    console.log('Path Name: ' + uri);
+
+    console.log('req param id: ' + req.params.id);
+    console.log('req param type: ' + path.extname(req.params.id));
+
+    res.writeHead('200', {'Content-Type':'text/html;charset=utf8'});
+    res.write('<h3>Success to File Uploaded</h3>');
+    res.end();
 });
 
 
